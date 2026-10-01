@@ -1,54 +1,54 @@
-<<<<<<< HEAD >>>>>>>>
-# project_tibbers
-Pesquisas do ciclo completo de operação de um SIEM
-=======
-# Tibbers — Estudo de engenharia de detecção com Wazuh
+# Tibbers — Pesquisa em operação de um SOC com Wazuh
 
-Pesquisa aplicada sobre **detecção e resposta (blue team)** usando o **Wazuh** (SIEM/XDR
-open source). O objetivo não é entregar um laboratório para montar, e sim **documentar e
-analisar** como técnicas de ataque comuns são detectadas, por que as regras funcionam (ou
-falham) e o que isso ensina sobre engenharia de detecção.
+Estudo aplicado sobre como **operar um Security Operations Center** (blue team) de ponta a
+ponta sobre uma stack **open source** centrada no **Wazuh** (SIEM/XDR). Não é um guia de
+instalação nem um laboratório para montar: é uma **pesquisa documentada** sobre as decisões,
+os mecanismos e as lições de cada parte de um SOC — telemetria, engenharia de detecção,
+resposta, gestão de vulnerabilidades, hardening e validação *purple team*.
 
-É um recorte enxuto, centrado em cinco técnicas representativas do MITRE ATT&CK.
+O material cobre um ambiente corporativo de referência (Active Directory, servidores,
+estações, servidor web e uma estação ofensiva) e analisa **detecções mapeadas ao MITRE
+ATT&CK**, incluindo por que cada regra funciona — ou falha — e o que isso ensina.
 
-## Pergunta de pesquisa
+## Pergunta central
 
-> Dado um ambiente corporativo típico (Active Directory + endpoints Windows) monitorado por
-> Wazuh, **como escrever regras de detecção confiáveis** para técnicas comuns de ataque, e
-> quais armadilhas de telemetria e de ruleset precisam ser contornadas?
+> Como montar, operar e **defender tecnicamente** um SOC corporativo sobre ferramentas open
+> source (custo de licença ~0), com detecção confiável e resposta efetiva, e quais armadilhas
+> de telemetria e de engenharia de detecção precisam ser contornadas?
 
-## Escopo
+## Como o estudo está organizado
 
-- **Cinco técnicas estudadas:** brute force, Kerberoasting, persistência por serviço,
-  exfiltração por rede e sabotagem anti-forense.
-- **Fontes de telemetria:** canais de evento do Windows (Security/System) e Sysmon.
-- **Foco:** a lógica de detecção (regra + ancoragem + MITRE) e as lições de tuning — não a
-  automação de infraestrutura.
+| # | Documento | O que investiga |
+|---|---|---|
+| 00 | [Contexto e escopo](docs/00-contexto-e-escopo.md) | Motivação, perguntas de pesquisa e os cinco pilares do SOC estudado |
+| 01 | [Ambiente de referência](docs/01-ambiente-de-referencia.md) | Topologia, rede isolada, domínio e papéis dos hosts (conceitual) |
+| 02 | [Metodologia](docs/02-metodologia.md) | Como cada detecção/afirmação é construída e validada |
+| 03 | [Telemetria](docs/03-telemetria.md) | Fontes de log: Sysmon, auditd, canais do Windows, FIM |
+| 04 | [Engenharia de detecção](docs/04-engenharia-de-deteccao.md) | Regras, decoders, ancoragem, correlação e as armadilhas do ruleset |
+| 05 | [Resposta e remediação](docs/05-resposta-e-remediacao.md) | Active Response, lockout GPO, gestão de vulnerabilidades e patch |
+| 06 | [Hardening e evolução](docs/06-hardening-e-roadmap.md) | Redução de superfície (RunAsPPL, ASR) e roadmap de maturidade |
+| 07 | [Cobertura MITRE ATT&CK](docs/07-cobertura-mitre.md) | As 12 táticas e o catálogo de técnicas estudadas |
+| 08 | [Resultados e lições](docs/08-resultados-e-licoes.md) | O que generaliza: lições sistêmicas de detecção e operação |
+| 09 | [Referências](docs/09-referencias.md) | Documentação e material de apoio |
+| 10 | [Regras corporativas](docs/10-regras-corporativas.md) | Conjunto adicional de detecções úteis no dia a dia de um SOC |
 
-## O que você encontra aqui
+Complementos:
 
-| Documento | Conteúdo |
-|---|---|
-| [00 — Contexto e escopo](docs/00-contexto-e-escopo.md) | Motivação, perguntas e o ambiente de referência estudado |
-| [01 — Metodologia](docs/01-metodologia.md) | Como cada detecção é construída e validada |
-| [02 — Detecção e regras](docs/02-deteccao-e-regras.md) | As cinco regras, ancoragem no ruleset e MITRE |
-| [03 — Resultados e lições](docs/03-resultados-e-licoes.md) | Achados, armadilhas e o que generaliza |
-| [04 — Referências](docs/04-referencias.md) | Documentação e material de apoio |
-| [Casos estudados](casos/README.md) | As cinco técnicas, uma a uma |
+- [Casos estudados](casos/README.md) — catálogo das técnicas por tática (o "o quê" e o "como se detecta").
+- Artefatos de detecção:
+  [`configs/wazuh/local_rules.xml`](configs/wazuh/local_rules.xml) (representativas por tática) e
+  [`configs/wazuh/local_rules-corporativas.xml`](configs/wazuh/local_rules-corporativas.xml) (conjunto corporativo, IDs `110100`+).
 
-Os artefatos de detecção (regras) estão em
-[`configs/wazuh/local_rules.xml`](configs/wazuh/local_rules.xml).
+## Os cinco pilares estudados
 
-## Ambiente de referência
-
-O estudo assume um ambiente isolado e pequeno, descrito em
-[00 — Contexto e escopo](docs/00-contexto-e-escopo.md): um domínio `corp.tibbers.lab`
-(`10.20.0.0/24`) com um controlador de domínio que também serve de endpoint monitorado, o
-Wazuh all-in-one e uma estação ofensiva usada apenas para gerar a telemetria de ataque.
+1. **Telemetria** — Sysmon, canais de evento do Windows, Windows Defender, auditd, logs web, FIM.
+2. **Detecção** — regras customizadas + built-in, correlação, alinhamento MITRE ATT&CK.
+3. **Resposta** — Active Response (bloqueio de IP), lockout de conta via GPO, contenção.
+4. **Gestão de vulnerabilidades** — detecção de CVEs e patch em massa (Chocolatey via Active Response).
+5. **Validação (purple team)** — ataques controlados validam cada detecção.
 
 ## Observações
 
 - Ambiente **isolado**; ferramentas ofensivas apenas na estação dedicada.
-- **Nenhuma credencial real** — valores fictícios documentados.
-- Material educacional, para estudo de detecção defensiva.
->>>>>>> ffafd61 (docs: estudo de engenharia de deteccao com Wazuh)
+- **Nenhuma credencial real** — todos os valores são fictícios e exclusivos deste estudo.
+- Material **educacional**, com foco em defesa. O interesse é **detectar e corrigir**, não atacar.

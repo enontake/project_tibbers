@@ -1,0 +1,191 @@
+<!--
+  Tibbers - regras corporativas uteis (conjunto adicional, 110100+).
+  Deteccoes comuns de SOC para ambiente Windows/AD. Cada regra e ancorada no pai
+  correto (if_sid/if_group) e mapeada ao MITRE ATT&CK. Ver docs/10-regras-corporativas.md.
+  Validar com: /var/ossec/bin/wazuh-analysisd -t
+  Convencoes de campo: canal Security -> win.system.eventID / win.eventdata.*;
+  Sysmon EID1 -> grupo sysmon_event1 (sem underscore), campos commandLine/image/parentImage.
+-->
+<group name="tibbers,corporativas,">
+
+  <!-- ===== TA0006 Acesso a Credenciais / Identidade ===== -->
+
+  <!-- Base: bloqueio de conta (4740). -->
+  <rule id="110100" level="5">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4740$</field>
+    <description>Tibbers: conta de dominio bloqueada (4740)</description>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+
+  <!-- Tempestade de lockouts: muitas contas bloqueadas numa janela (possivel spray). -->
+  <rule id="110101" level="12" frequency="5" timeframe="300">
+    <if_matched_sid>110100</if_matched_sid>
+    <description>Tibbers: tempestade de bloqueios de conta (possivel ataque de senha) - T1110</description>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+
+  <!-- Linha de comando tipo Mimikatz (sekurlsa/logonpasswords/lsadump). -->
+  <rule id="110102" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(sekurlsa|logonpasswords|lsadump|mimikatz|kerberos::|crypto::)</field>
+    <description>Tibbers: linha de comando compativel com Mimikatz (dump de credenciais) - T1003</description>
+    <mitre><id>T1003</id></mitre>
+  </rule>
+
+  <!-- Dump do NTDS via ntdsutil / ntds. -->
+  <rule id="110103" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(ntdsutil|ntds\.dit|create full|ifm)</field>
+    <description>Tibbers: coleta do NTDS.dit via ntdsutil/IFM - T1003.003</description>
+    <mitre><id>T1003.003</id></mitre>
+  </rule>
+
+  <!-- ===== TA0003 Persistencia / TA0004 Escalonamento ===== -->
+
+  <!-- Adicao a grupo privilegiado (Admins locais/dominio, Enterprise, DnsAdmins...). -->
+  <rule id="110104" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID" type="pcre2">^(4728|4732|4756)$</field>
+    <field name="win.eventdata.targetUserName" type="pcre2">(?i)(admin|domain admins|enterprise admins|schema admins|dnsadmins|backup operators)</field>
+    <description>Tibbers: conta adicionada a grupo privilegiado - T1098</description>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+
+  <!-- Novo servico apontando para caminho suspeito (Temp/AppData/Users/ProgramData). -->
+  <rule id="110105" level="12">
+    <if_sid>61138</if_sid>
+    <field name="win.eventdata.imagePath" type="pcre2">(?i)\\(Temp|AppData|Users|ProgramData|Downloads)\\</field>
+    <description>Tibbers: novo servico com binario em caminho suspeito - T1543.003</description>
+    <mitre><id>T1543.003</id></mitre>
+  </rule>
+
+  <!-- Criacao de conta local via linha de comando (net user ... /add). -->
+  <rule id="110106" level="10">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)net(1)?\s+user\s+\S+\s+.*\/add</field>
+    <description>Tibbers: criacao de conta local via net.exe - T1136.001</description>
+    <mitre><id>T1136.001</id></mitre>
+  </rule>
+
+  <!-- ===== TA0005 Evasao de Defesa ===== -->
+
+  <!-- Log de seguranca limpo (1102). -->
+  <rule id="110107" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^1102$</field>
+    <description>Tibbers: log de seguranca do Windows foi limpo - T1070.001</description>
+    <mitre><id>T1070.001</id></mitre>
+  </rule>
+
+  <!-- Limpeza de log via wevtutil cl / Clear-EventLog. -->
+  <rule id="110108" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(wevtutil\s+cl|Clear-EventLog)</field>
+    <description>Tibbers: limpeza de log de eventos via linha de comando - T1070.001</description>
+    <mitre><id>T1070.001</id></mitre>
+  </rule>
+
+  <!-- Firewall do Windows desabilitado (netsh advfirewall ... state off). -->
+  <rule id="110109" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)netsh\s+advfirewall\s+set\s+.*state\s+off</field>
+    <description>Tibbers: firewall do Windows desabilitado via netsh - T1562.004</description>
+    <mitre><id>T1562.004</id></mitre>
+  </rule>
+
+  <!-- Defender: protecao em tempo real desabilitada. -->
+  <rule id="110110" level="13">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(DisableRealtimeMonitoring\s+\$?true|Set-MpPreference\s+-Disable)</field>
+    <description>Tibbers: protecao em tempo real do Defender desabilitada - T1562.001</description>
+    <mitre><id>T1562.001</id></mitre>
+  </rule>
+
+  <!-- Defender: exclusao de caminho/processo adicionada. -->
+  <rule id="110111" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)Add-MpPreference\s+-Exclusion(Path|Process|Extension)</field>
+    <description>Tibbers: exclusao adicionada ao Defender (possivel evasao) - T1562.001</description>
+    <mitre><id>T1562.001</id></mitre>
+  </rule>
+
+  <!-- ===== TA0002 Execucao / TA0008 Movimento Lateral ===== -->
+
+  <!-- Aplicativo Office gerando shell/script (macro maliciosa). -->
+  <rule id="110112" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)\\(winword|excel|powerpnt|outlook|mspub|visio)\.exe$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\(cmd|powershell|pwsh|wscript|cscript|mshta|rundll32|regsvr32)\.exe$</field>
+    <description>Tibbers: aplicativo Office gerou shell/script (possivel macro maliciosa) - T1204.002</description>
+    <mitre><id>T1204.002</id></mitre>
+  </rule>
+
+  <!-- PowerShell com EncodedCommand / comando ofuscado. -->
+  <rule id="110113" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\(powershell|pwsh)\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(-enc(odedcommand)?\s|-e\s+[A-Za-z0-9+/=]{20,}|FromBase64String|IEX\s*\(|DownloadString)</field>
+    <description>Tibbers: PowerShell ofuscado/EncodedCommand - T1059.001</description>
+    <mitre><id>T1059.001</id></mitre>
+  </rule>
+
+  <!-- Abuso de BITS para download (bitsadmin /transfer). -->
+  <rule id="110114" level="10">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(bitsadmin.*\/transfer|Start-BitsTransfer)</field>
+    <description>Tibbers: transferencia via BITS (possivel download de payload) - T1197</description>
+    <mitre><id>T1197</id></mitre>
+  </rule>
+
+  <!-- Criacao/manipulacao remota de servico via sc.exe \\host. -->
+  <rule id="110115" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\bsc(\.exe)?\s+\\\\\S+\s+(create|config|start)</field>
+    <description>Tibbers: criacao remota de servico via sc.exe (movimento lateral) - T1021.002</description>
+    <mitre><id>T1021.002</id></mitre>
+  </rule>
+
+  <!-- Execucao remota via WMIC /node. -->
+  <rule id="110116" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)wmic\s+\/node:\S+\s+process\s+call\s+create</field>
+    <description>Tibbers: execucao remota via WMIC /node (movimento lateral) - T1047</description>
+    <mitre><id>T1047</id></mitre>
+  </rule>
+
+  <!-- ===== TA0007 Descoberta ===== -->
+
+  <!-- Reconhecimento de AD (enumeracao de grupos/dominio). -->
+  <rule id="110117" level="8">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(net\s+group\s+.domain admins.\s+\/domain|nltest\s+\/dclist|net\s+group\s+\/domain|dsquery\s+)</field>
+    <description>Tibbers: reconhecimento de contas/grupos do dominio - T1087</description>
+    <mitre><id>T1087</id></mitre>
+  </rule>
+
+  <!-- ===== TA0040 Impacto ===== -->
+
+  <!-- Inibir recuperacao (bcdedit/wbadmin). -->
+  <rule id="110118" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(bcdedit.*recoveryenabled\s+no|bcdedit.*bootstatuspolicy\s+ignoreallfailures|wbadmin\s+delete\s+(catalog|systemstatebackup))</field>
+    <description>Tibbers: tentativa de inibir recuperacao do sistema - T1490</description>
+    <mitre><id>T1490</id></mitre>
+  </rule>
+
+  <!-- Parada de multiplos servicos (frequency). -->
+  <rule id="110119" level="6">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(net\s+stop\s|Stop-Service\s|sc\s+stop\s)</field>
+    <description>Tibbers: parada de servico via linha de comando</description>
+    <mitre><id>T1489</id></mitre>
+  </rule>
+  <rule id="110120" level="12" frequency="5" timeframe="120">
+    <if_matched_sid>110119</if_matched_sid>
+    <same_field>win.eventdata.user</same_field>
+    <description>Tibbers: parada de multiplos servicos numa janela (possivel impacto) - T1489</description>
+    <mitre><id>T1489</id></mitre>
+  </rule>
+
+</group>
