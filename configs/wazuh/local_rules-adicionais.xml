@@ -1,12 +1,12 @@
 <!--
-  Tibbers - regras corporativas uteis (conjunto adicional, 110100+).
+  Tibbers - regras adicionais uteis (conjunto complementar, 110100+).
   Deteccoes comuns de SOC para ambiente Windows/AD. Cada regra e ancorada no pai
-  correto (if_sid/if_group) e mapeada ao MITRE ATT&CK. Ver docs/10-regras-corporativas.md.
+  correto (if_sid/if_group) e mapeada ao MITRE ATT&CK. Ver docs/10-regras-adicionais.md.
   Validar com: /var/ossec/bin/wazuh-analysisd -t
   Convencoes de campo: canal Security -> win.system.eventID / win.eventdata.*;
   Sysmon EID1 -> grupo sysmon_event1 (sem underscore), campos commandLine/image/parentImage.
 -->
-<group name="tibbers,corporativas,">
+<group name="tibbers,adicionais,">
 
   <!-- ===== TA0006 Acesso a Credenciais / Identidade ===== -->
 

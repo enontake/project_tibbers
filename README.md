@@ -30,14 +30,14 @@ ATT&CK**, incluindo por que cada regra funciona — ou falha — e o que isso en
 | 07 | [Cobertura MITRE ATT&CK](docs/07-cobertura-mitre.md) | As 12 táticas e o catálogo de técnicas estudadas |
 | 08 | [Resultados e lições](docs/08-resultados-e-licoes.md) | O que generaliza: lições sistêmicas de detecção e operação |
 | 09 | [Referências](docs/09-referencias.md) | Documentação e material de apoio |
-| 10 | [Regras corporativas](docs/10-regras-corporativas.md) | Conjunto adicional de detecções úteis no dia a dia de um SOC |
+| 10 | [Regras adicionais](docs/10-regras-adicionais.md) | Conjunto complementar de detecções úteis para um SOC |
 
 Complementos:
 
 - [Casos estudados](casos/README.md) — catálogo das técnicas por tática (o "o quê" e o "como se detecta").
 - Artefatos de detecção:
   [`configs/wazuh/local_rules.xml`](configs/wazuh/local_rules.xml) (representativas por tática) e
-  [`configs/wazuh/local_rules-corporativas.xml`](configs/wazuh/local_rules-corporativas.xml) (conjunto corporativo, IDs `110100`+).
+  [`configs/wazuh/local_rules-adicionais.xml`](configs/wazuh/local_rules-adicionais.xml) (conjunto complementar, IDs `110100`+).
 
 ## Os cinco pilares estudados
 

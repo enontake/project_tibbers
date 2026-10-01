@@ -1,10 +1,10 @@
-# 10 — Regras corporativas (conjunto adicional)
+# 10 — Regras adicionais
 
 [◀ Referências](09-referencias.md)
 
-Conjunto de regras **úteis no dia a dia de um SOC corporativo** — detecções de alto valor que
+Conjunto de regras **úteis no dia a dia de um SOC** — detecções de alto valor que
 complementam o catálogo representativo do estudo. Os artefatos estão em
-[`../configs/wazuh/local_rules-corporativas.xml`](../configs/wazuh/local_rules-corporativas.xml)
+[`../configs/wazuh/local_rules-adicionais.xml`](../configs/wazuh/local_rules-adicionais.xml)
 (IDs `110100`+). Os princípios de ancoragem são os mesmos de
 [04 — Engenharia de detecção](04-engenharia-de-deteccao.md).
 
@@ -15,7 +15,7 @@ complementam o catálogo representativo do estudo. Os artefatos estão em
 
 ## Catálogo
 
-| Regra | Nível | Detecção | Tática / MITRE | Por que importa no corporativo |
+| Regra | Nível | Detecção | Tática / MITRE | Por que importa |
 |---|:---:|---|---|---|
 | 110100 | 5 | Conta de domínio bloqueada (4740) | Credenciais · T1110 | Base para correlação; lockouts são sinal precoce |
 | 110101 | 12 | Tempestade de bloqueios (5 em 5 min) | Credenciais · T1110 | Indica password spraying / brute force em escala |
