@@ -1,11 +1,14 @@
 <!--
-  Tibbers - regras de deteccao do estudo (110001-110005).
-  Cada regra e ancorada no pai correto (if_sid/if_group) e mapeada ao MITRE ATT&CK.
+  Tibbers - regras de deteccao representativas do estudo.
+  Conjunto por tatica (amostra; o catalogo completo esta em casos/README.md).
+  Cada regra e ancorada no pai correto (if_sid/if_group) - ver docs/04-engenharia-de-deteccao.md.
   Validar com: /var/ossec/bin/wazuh-analysisd -t
 -->
 <group name="tibbers,">
 
-  <!-- 01 - Brute force de logon (T1110): escala da built-in de frequencia 60204.
+  <!-- ===== TA0006 Acesso a Credenciais ===== -->
+
+  <!-- Brute force de logon (T1110): escala da built-in de frequencia 60204.
        O canal Windows nao popula srcip; a correlacao usa win.eventdata.ipAddress. -->
   <rule id="110001" level="12">
     <if_sid>60204</if_sid>
@@ -14,7 +17,7 @@
     <group>authentication_failures,</group>
   </rule>
 
-  <!-- 02 - Kerberoasting (T1558.003): 4769 com RC4 (0x17) no canal Security. -->
+  <!-- Kerberoasting (T1558.003): 4769 com RC4 (0x17). -->
   <rule id="110002" level="12">
     <if_sid>60103</if_sid>
     <field name="win.system.eventID">^4769$</field>
@@ -23,15 +26,109 @@
     <mitre><id>T1558.003</id></mitre>
   </rule>
 
-  <!-- 03 - Persistencia por novo servico (T1543.003): System 7045. -->
+  <!-- Password spraying (T1110.003): mesmo IP, usuarios diferentes, numa janela.
+       Correlacao exige if_matched_sid (nao if_sid). -->
+  <rule id="110010" level="12" frequency="6" timeframe="120">
+    <if_matched_sid>60122</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <different_field>win.eventdata.targetUserName</different_field>
+    <description>Tibbers: password spraying (1 origem, varias contas) - T1110.003</description>
+    <mitre><id>T1110.003</id></mitre>
+  </rule>
+
+  <!-- DCSync (T1003.006): 4662 com GUID de replicacao de diretorio. -->
+  <rule id="110009" level="14">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4662$</field>
+    <field name="win.eventdata.properties" type="pcre2">1131f6aa|1131f6ad</field>
+    <description>Tibbers: acesso de replicacao de diretorio (possivel DCSync) - T1003.006</description>
+    <mitre><id>T1003.006</id></mitre>
+  </rule>
+
+  <!-- Credential dumping - acesso a LSASS (T1003.001): Sysmon EID 10.
+       grantedAccess ancorado para nao casar dentro de valores maiores. -->
+  <rule id="110015" level="12">
+    <if_group>sysmon_event_10</if_group>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)\\lsass\.exe$</field>
+    <field name="win.eventdata.grantedAccess" type="pcre2">^0x(1010|1038|143a|1410|1fffff)$</field>
+    <description>Tibbers: acesso sensivel a LSASS (possivel credential dumping) - T1003.001</description>
+    <mitre><id>T1003.001</id></mitre>
+  </rule>
+
+  <!-- ===== TA0003 Persistencia ===== -->
+
+  <!-- Novo servico (T1543.003): System 7045. -->
   <rule id="110003" level="10">
     <if_sid>61138</if_sid>
     <description>Tibbers: novo servico instalado (possivel persistencia) - T1543.003</description>
     <mitre><id>T1543.003</id></mitre>
   </rule>
 
-  <!-- 04 - Exfiltracao por rede (T1041/T1048): Sysmon EID 3 para o host de ataque.
-       Aqui ha IP de rede -> resposta firewall-drop e aplicavel. -->
+  <!-- Tarefa agendada (T1053.005): Security 4698, exclui tarefas nativas. -->
+  <rule id="110006" level="10">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4698$</field>
+    <field name="win.eventdata.taskName" negate="yes" type="pcre2">(?i)^\\Microsoft\\Windows\\</field>
+    <description>Tibbers: tarefa agendada criada (exclui nativas) - T1053.005</description>
+    <mitre><id>T1053.005</id></mitre>
+  </rule>
+
+  <!-- Criacao de conta (T1136.001): 4720 tem built-in dedicada 60109. -->
+  <rule id="110007" level="8">
+    <if_sid>60109</if_sid>
+    <description>Tibbers: nova conta de usuario criada - T1136.001</description>
+    <mitre><id>T1136.001</id></mitre>
+  </rule>
+
+  <!-- ===== TA0004 Escalonamento ===== -->
+
+  <!-- Modificacao de GPO (T1484.001): Security 5136 (Directory Service Changes). -->
+  <rule id="110008" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^5136$</field>
+    <description>Tibbers: alteracao em objeto de diretorio (possivel abuso de GPO) - T1484.001</description>
+    <mitre><id>T1484.001</id></mitre>
+  </rule>
+
+  <!-- ===== TA0005 Evasao de Defesa ===== -->
+
+  <!-- Anti-forense: servico -> disabled (T1562.001): System 7040, campo param3. -->
+  <rule id="110005" level="12">
+    <if_sid>61104</if_sid>
+    <field name="win.eventdata.param3">disabled</field>
+    <description>Tibbers: servico alterado para disabled (possivel sabotagem) - T1562.001</description>
+    <mitre><id>T1562.001</id></mitre>
+  </rule>
+
+  <!-- Timestomping (T1070.006): Sysmon EID 2. -->
+  <rule id="110012" level="10">
+    <if_group>sysmon_event2</if_group>
+    <description>Tibbers: alteracao de timestamp de arquivo (timestomping) - T1070.006</description>
+    <mitre><id>T1070.006</id></mitre>
+  </rule>
+
+  <!-- Alternate Data Streams (T1564.004): Sysmon EID 15. -->
+  <rule id="110013" level="10">
+    <if_group>sysmon_event_15</if_group>
+    <description>Tibbers: criacao de Alternate Data Stream (ocultacao em NTFS) - T1564.004</description>
+    <mitre><id>T1564.004</id></mitre>
+  </rule>
+
+  <!-- ===== TA0008 Movimento Lateral ===== -->
+
+  <!-- Pass-the-Hash (T1550.002): 4624 tipo 3, pacote NTLM. -->
+  <rule id="110011" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4624$</field>
+    <field name="win.eventdata.logonType">^3$</field>
+    <field name="win.eventdata.authenticationPackageName" type="pcre2">(?i)NTLM</field>
+    <description>Tibbers: logon de rede NTLM tipo 3 (possivel Pass-the-Hash) - T1550.002</description>
+    <mitre><id>T1550.002</id></mitre>
+  </rule>
+
+  <!-- ===== TA0010 Exfiltracao ===== -->
+
+  <!-- Exfiltracao por rede (T1041/T1048): Sysmon EID 3 para o host de ataque. -->
   <rule id="110004" level="8">
     <if_sid>92101</if_sid>
     <field name="win.eventdata.destinationIp" type="pcre2">^10\.20\.0\.50$</field>
@@ -39,12 +136,14 @@
     <mitre><id>T1041</id><id>T1048</id></mitre>
   </rule>
 
-  <!-- 05 - Anti-forense (T1562.001): System 7040, servico alterado para disabled. -->
-  <rule id="110005" level="12">
-    <if_sid>61104</if_sid>
-    <field name="win.eventdata.param3">disabled</field>
-    <description>Tibbers: servico alterado para disabled (possivel sabotagem anti-forense) - T1562.001</description>
-    <mitre><id>T1562.001</id></mitre>
+  <!-- ===== TA0040 Impacto ===== -->
+
+  <!-- Delecao de shadow copies (T1490): processo vssadmin delete shadows. -->
+  <rule id="110014" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)vssadmin.*delete.*shadows</field>
+    <description>Tibbers: delecao de shadow copies (inibir recuperacao) - T1490</description>
+    <mitre><id>T1490</id></mitre>
   </rule>
 
 </group>

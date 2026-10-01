@@ -4,45 +4,54 @@
 
 ## Motivação
 
-Detectar ataques com um SIEM não é "ligar e esperar o alerta". A maior parte do esforço está
-em **engenharia de detecção**: entender qual evento registra a técnica, escrever uma regra
-que case exatamente esse evento e separar o sinal do ruído. Este estudo documenta esse
-trabalho para cinco técnicas comuns, usando o Wazuh.
+Operar um SIEM corporativo não se resume a instalá-lo. O valor está em **engenharia de
+detecção** (entender qual evento registra cada técnica e escrever regras que de fato
+disparem), em **resposta** (conter o incidente a partir do próprio SIEM) e em **redução de
+superfície** (vulnerabilidades e hardening). Este estudo documenta esse ciclo completo sobre
+uma stack open source, usando o Wazuh como núcleo.
+
+A escolha por open source é deliberada: demonstra que é possível montar capacidade de
+detecção e resposta de nível corporativo com **custo de licença próximo de zero**, à custa de
+engenharia própria — que é justamente o objeto desta pesquisa.
 
 ## Perguntas de pesquisa
 
-1. Qual evento (e qual campo) registra cada técnica no Windows/Sysmon?
-2. Como ancorar a regra para que ela realmente dispare, em vez de ser engolida por uma regra
-   genérica de nível baixo?
-3. Quais limitações de telemetria (campos ausentes, canais que não populam certos dados)
-   mudam a estratégia de detecção e de resposta?
+1. Que arquitetura mínima reproduz um ambiente corporativo realista e isolado para estudar
+   detecção?
+2. Quais fontes de telemetria registram cada tática do MITRE ATT&CK, e com quais limitações?
+3. Como escrever regras **confiáveis** — que disparem no evento certo, no nível certo, sem
+   serem engolidas por regras genéricas?
+4. Que respostas automatizadas são viáveis a partir do próprio SIEM, e quando cada uma se
+   aplica?
+5. Como fechar o ciclo com gestão de vulnerabilidades e hardening, e como medir maturidade?
 
-## Técnicas estudadas (MITRE ATT&CK)
+## Os cinco pilares (escopo)
 
-| # | Técnica | ID | Por que importa |
-|---|---|---|---|
-| 01 | Brute force de logon | T1110 | Porta de entrada clássica; alto volume, fácil de confundir com erro legítimo |
-| 02 | Kerberoasting | T1558.003 | Abuso de SPN com cifra fraca; indicador sutil (RC4 em 4769) |
-| 03 | Persistência por serviço | T1543.003 | Mecanismo durável e comum de persistência |
-| 04 | Exfiltração por rede | T1041 / T1048 | Saída de dados para host externo; exige telemetria de rede |
-| 05 | Sabotagem anti-forense | T1562.001 | Desabilitar serviços de defesa para cegar o SOC |
+| Pilar | O que o estudo cobre |
+|---|---|
+| Telemetria | Sysmon (EIDs de processo/rede/registro/LSASS), canais Security/System, Windows Defender, auditd (Linux), logs web (nginx), FIM |
+| Detecção | Regras locais, decoders, correlação, ancoragem no ruleset, mapeamento MITRE |
+| Resposta | Active Response (`firewall-drop`), lockout de conta via GPO, contenção |
+| Vulnerabilidades | Detecção de CVEs por inventário + patch em massa (Chocolatey via Active Response) |
+| Validação | Ataques controlados (purple team) que provam cada detecção com evidência |
 
-## Ambiente de referência
+## O que está fora do escopo
 
-O estudo assume um ambiente mínimo e isolado — suficiente para gerar a telemetria das cinco
-técnicas, sem a complexidade de uma rede corporativa inteira.
+- **Provisionamento/instalação passo a passo** — o interesse é a operação e a detecção, não
+  o build da infraestrutura.
+- **Escala de produção** (cluster de Indexers, alta disponibilidade) — citada como evolução,
+  não executada.
+- **Enriquecimento externo** (threat intel comercial) — tratado no roadmap.
 
-| Host | IP | Papel |
-|---|---|---|
-| wazuh | 10.20.0.10 | Wazuh all-in-one (Manager + Indexer + Dashboard) |
-| dc01 | 10.20.0.5 | Domínio `corp.tibbers.lab` (AD/DNS) e endpoint monitorado (Sysmon) |
-| atacante | 10.20.0.50 | Estação ofensiva, usada só para gerar a telemetria de ataque |
+## Fases do estudo
 
-Rede isolada `10.20.0.0/24`, sem bridge com a rede física. Contas são fictícias: usuário de
-domínio `jdoe` e conta de serviço `svc_app` (com SPN, necessária para o cenário de
-Kerberoasting).
+O material acompanha a maturação de um SOC em três fases, da base à detecção avançada:
 
-> Este é o **cenário de referência** do estudo, não um guia de instalação. O interesse está
-> na detecção, não no provisionamento.
+1. **Fundamentos e saúde do pipeline** — a telemetria precisa estar íntegra antes de detectar
+   qualquer coisa (agente online, enrollment, logs chegando, Sysmon emitindo, sem flood).
+2. **Detecção de ataques** — técnicas ofensivas comuns (brute force, Kerberoasting, dumping,
+   web, malware) e suas detecções.
+3. **Detecção avançada e evasão** — persistência, exfiltração, anti-forense e as técnicas que
+   tentam cegar o SOC.
 
-[◀ README](../README.md) · [Metodologia ▶](01-metodologia.md)
+[◀ README](../README.md) · [Ambiente de referência ▶](01-ambiente-de-referencia.md)
