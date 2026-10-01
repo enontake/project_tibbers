@@ -1,0 +1,50 @@
+<!--
+  Tibbers - regras de deteccao do estudo (110001-110005).
+  Cada regra e ancorada no pai correto (if_sid/if_group) e mapeada ao MITRE ATT&CK.
+  Validar com: /var/ossec/bin/wazuh-analysisd -t
+-->
+<group name="tibbers,">
+
+  <!-- 01 - Brute force de logon (T1110): escala da built-in de frequencia 60204.
+       O canal Windows nao popula srcip; a correlacao usa win.eventdata.ipAddress. -->
+  <rule id="110001" level="12">
+    <if_sid>60204</if_sid>
+    <description>Tibbers: brute force de logon (varias falhas 4625 do mesmo IP) - T1110</description>
+    <mitre><id>T1110</id></mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <!-- 02 - Kerberoasting (T1558.003): 4769 com RC4 (0x17) no canal Security. -->
+  <rule id="110002" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.ticketEncryptionType">^0x17$</field>
+    <description>Tibbers: solicitacao de TGS com RC4 (possivel Kerberoasting) - T1558.003</description>
+    <mitre><id>T1558.003</id></mitre>
+  </rule>
+
+  <!-- 03 - Persistencia por novo servico (T1543.003): System 7045. -->
+  <rule id="110003" level="10">
+    <if_sid>61138</if_sid>
+    <description>Tibbers: novo servico instalado (possivel persistencia) - T1543.003</description>
+    <mitre><id>T1543.003</id></mitre>
+  </rule>
+
+  <!-- 04 - Exfiltracao por rede (T1041/T1048): Sysmon EID 3 para o host de ataque.
+       Aqui ha IP de rede -> resposta firewall-drop e aplicavel. -->
+  <rule id="110004" level="8">
+    <if_sid>92101</if_sid>
+    <field name="win.eventdata.destinationIp" type="pcre2">^10\.20\.0\.50$</field>
+    <description>Tibbers: conexao de saida para o host de ataque (possivel exfiltracao) - T1041/T1048</description>
+    <mitre><id>T1041</id><id>T1048</id></mitre>
+  </rule>
+
+  <!-- 05 - Anti-forense (T1562.001): System 7040, servico alterado para disabled. -->
+  <rule id="110005" level="12">
+    <if_sid>61104</if_sid>
+    <field name="win.eventdata.param3">disabled</field>
+    <description>Tibbers: servico alterado para disabled (possivel sabotagem anti-forense) - T1562.001</description>
+    <mitre><id>T1562.001</id></mitre>
+  </rule>
+
+</group>
